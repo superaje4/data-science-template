@@ -47,6 +47,7 @@ def preprocess_data(df):
     df = df.groupby('StockCode').apply(fill_group).reset_index(drop=True)
     return df
 
+
 @st.cache_data
 def scrap_tambahan():
     stock_code=pd.read_csv("data/processed/clean_database.csv")["StockCode"].unique()
@@ -116,7 +117,11 @@ def gabung_data(nama_perusahaan):
     df_perusahaan["Date"]=df_perusahaan["Date"].astype(str)
     df_perusahaan=preprocess_data(df_perusahaan)
     return df_perusahaan
-    
+
+def ambil_data_train(title):
+    df=pd.read_csv("data/processed/clean_database.csv")
+    df=df.loc[df["StockCode"]==title]
+    return df
 
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -130,7 +135,7 @@ def download_link(data_perusahaan):
         file_name='large_df.csv',
         mime='text/csv',
     )
-    
+
 # Inisialisasi session state untuk 'data_perusahaan'
 st.session_state['data_perusahaan'] = None
 st.title('Unlock Insights: Advanced Forecasting Models at Your Fingertips')
@@ -143,4 +148,9 @@ with col1:
     if button_scrap:
         title=str(input)
         st.session_state['data_perusahaan'] = gabung_data(title)
-#buat fungsi preprocessing
+     
+with col2:
+    if 'data_perusahaan' in st.session_state and st.session_state['data_perusahaan'] is not None:
+        # Asumsi 'download_link' adalah fungsi yang Anda definisikan untuk mengunduh data
+        download_link(st.session_state['data_perusahaan'])
+        st.write(st.session_state['data_perusahaan'])
