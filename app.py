@@ -125,13 +125,13 @@ def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode('utf-8')
 
-def download_link(data_perusahaan):
+def download_link(data_perusahaan,key):
     csv = convert_df(data_perusahaan)
     st.download_button(
         label="Download data as CSV",
         data=csv,
         file_name='large_df.csv',
-        mime='text/csv',
+        mime='text/csv',key=key
     )
 
 st.title("scraping data saham")
@@ -141,7 +141,7 @@ if perusahaan:
     perusahaan=str(perusahaan)
     df,df1=gabung_data(perusahaan)
     st.write(df)
-    download_link(df)
-    
+    download_link(df,1)
+
     st.write(df1)
-    download_link(df1)
+    download_link(df1,2)
