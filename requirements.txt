@@ -1,4 +1,7 @@
-streamlit
-seleniumbase
-numpy
 pandas
+streamlit
+selenium
+requests
+pandas
+lxml
+countryflag

@@ -108,6 +108,62 @@ def scrap_tambahan():
         return tmp
 
 
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+import os
+import shutil
+import time
+
+def get_chromedriver_path() -> str:
+    return shutil.which('chromedriver')
+
+def get_webdriver_options(proxy: str = None) -> Options:
+    options = Options()
+    options.add_argument("--headless")
+    if proxy is not None:
+        options.add_argument(f"--proxy-server=socks5://{proxy}")
+    return options
+
+def get_webpage_content(url: str, proxy: str = None) -> str:
+    options = get_webdriver_options(proxy=proxy)
+    chromedriver_path = get_chromedriver_path()
+    service = Service(executable_path=chromedriver_path)
+    html_content = None
+    with webdriver.Chrome(service=service, options=options) as driver:
+        try:
+            driver.get(url)
+            time.sleep(2)  # Tunggu untuk memastikan halaman telah dimuat sepenuhnya
+            html_content = driver.page_source
+        except Exception as e:
+            print(f"Error during website access: {e}")
+    return html_content
+
+def ambil_data(perusahaan):
+    start_date = '2024-03-02'
+    now = datetime.now()
+    one_day_before = now - timedelta(days=1)
+    end_date = one_day_before.strftime("%Y-%m-%d")
+    dates = pd.date_range(start=start_date, end=end_date, freq='D')
+
+    #hilangkan jam detik dan milidetik
+    formatted_dates = [str(date).replace("-","") for date in dates]
+    formatted_dates = [date[:8] for date in formatted_dates]
+    for i in formatted_dates:
+        url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={i}"
+        proxy = None  # Ganti dengan proxy Anda jika perlu
+        content = get_webpage_content(url=url, proxy=proxy)
+        if content:
+            st.write("Successfully retrieved web page content.")
+        else:
+            st.write("Failed to retrieve web page content.")
+
+input=st.text_input('Write the IDX of the company')
+
+if input:
+    ambil_data(input)
+
+
 
 
 
@@ -128,18 +184,18 @@ def scrap_tambahan():
 #     df=df.loc[df["StockCode"]==title]
 #     return df
 
-def convert_df(df):
-    # IMPORTANT: Cache the conversion to prevent computation on every rerun
-    return df.to_csv().encode('utf-8')
+# def convert_df(df):
+#     # IMPORTANT: Cache the conversion to prevent computation on every rerun
+#     return df.to_csv().encode('utf-8')
 
-def download_link(data_perusahaan):
-    csv = convert_df(data_perusahaan)
-    st.download_button(
-        label="Download data as CSV",
-        data=csv,
-        file_name='large_df.csv',
-        mime='text/csv',
-    )
+# def download_link(data_perusahaan):
+#     csv = convert_df(data_perusahaan)
+#     st.download_button(
+#         label="Download data as CSV",
+#         data=csv,
+#         file_name='large_df.csv',
+#         mime='text/csv',
+#     )
 
 # # Inisialisasi session state untuk 'data_perusahaan'
 # st.session_state['data_perusahaan'] = None
@@ -159,10 +215,4 @@ def download_link(data_perusahaan):
 #         # Asumsi 'download_link' adalah fungsi yang Anda definisikan untuk mengunduh data
 #         download_link(st.session_state['data_perusahaan'])
 #         st.write(st.session_state['data_perusahaan'])
-input=st.text_input('Write the IDX of the company')
-if input:
-    perusahaan=str(input)
-    data=scrap_tambahan()
-    data=data[data["StockCode"]==perusahaan]
-    download_link(data)
-    st.write(data)
+# 
