@@ -12,8 +12,6 @@ import json
 import selenium
 from selenium.webdriver.chrome.options import Options
 
-
-#buat fungsi preprocessing
 @st.cache_data
 def preprocess_data(df):
     df["Date"] = [i.strip()[:10] for i in df["Date"]]
@@ -48,7 +46,6 @@ def preprocess_data(df):
     
     df = df.groupby('StockCode').apply(fill_group).reset_index(drop=True)
     return df
-
 
 @st.cache_data
 def scrap_tambahan():
@@ -118,30 +115,32 @@ def gabung_data(nama_perusahaan):
     df_perusahaan=df[df["StockCode"]==nama_perusahaan]
     df_perusahaan["Date"]=df_perusahaan["Date"].astype(str)
     df_perusahaan=preprocess_data(df_perusahaan)
-    return df_perusahaan,df1
+    return df_perusahaan
     
 
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode('utf-8')
 
-def download_link(data_perusahaan,key):
+def download_link(data_perusahaan):
     csv = convert_df(data_perusahaan)
     st.download_button(
         label="Download data as CSV",
         data=csv,
         file_name='large_df.csv',
-        mime='text/csv',key=key
+        mime='text/csv',
     )
+    
+# Inisialisasi session state untuk 'data_perusahaan'
+st.session_state['data_perusahaan'] = None
+st.title('Unlock Insights: Advanced Forecasting Models at Your Fingertips')
 
-st.title("scraping data saham")
-perusahaan=st.text_input("masukkan kode saham")
-
-if perusahaan:
-    perusahaan=str(perusahaan)
-    df,df1=gabung_data(perusahaan)
-    st.write(df)
-    download_link(df,1)
-
-    st.write(df1)
-    download_link(df1,2)
+col1,col2=st.columns(2)
+with col1:
+    input=st.text_input('Write the IDX of the company')
+    title=str(input)
+    button_scrap = st.button('Scrap Data')
+    if button_scrap:
+        title=str(input)
+        st.session_state['data_perusahaan'] = gabung_data(title)
+#buat fungsi preprocessing
