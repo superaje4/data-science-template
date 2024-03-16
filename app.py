@@ -98,6 +98,7 @@ def scrap_tambahan():
                 # Ensure the column names here match those in the JSON structure
                 df = df[["Date", "StockCode", "Close"]]
                 tmp = pd.concat([tmp, df], ignore_index=True)
+            st.write(f"Scraping data for date {change_date_format(i)}")
 
     finally:
         time.sleep(2)
