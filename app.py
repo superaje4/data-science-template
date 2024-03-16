@@ -118,7 +118,7 @@ def gabung_data(nama_perusahaan):
     df_perusahaan=df[df["StockCode"]==nama_perusahaan]
     df_perusahaan["Date"]=df_perusahaan["Date"].astype(str)
     df_perusahaan=preprocess_data(df_perusahaan)
-    return df_perusahaan
+    return df_perusahaan,df1
     
 
 def convert_df(df):
@@ -139,6 +139,9 @@ perusahaan=st.text_input("masukkan kode saham")
 
 if perusahaan:
     perusahaan=str(perusahaan)
-    perusahaan=gabung_data(perusahaan)
-    st.write(perusahaan)
-    download_link(perusahaan)
+    df,df1=gabung_data(perusahaan)
+    st.write(df)
+    download_link(df)
+    
+    st.write(df1)
+    download_link(df1)
