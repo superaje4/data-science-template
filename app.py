@@ -106,22 +106,25 @@ def scrap_tambahan():
         return tmp
 
 
-@st.cache_data
-def gabung_data(nama_perusahaan):
-    df=pd.read_csv("data/processed/clean_database.csv")
-    df1=scrap_tambahan()
-    df=pd.concat([df,df1],ignore_index=True)
-    
-    #spesifikasi namaperusahaan
-    df_perusahaan=df[df["StockCode"]==nama_perusahaan]
-    df_perusahaan["Date"]=df_perusahaan["Date"].astype(str)
-    df_perusahaan=preprocess_data(df_perusahaan)
-    return df_perusahaan
 
-def ambil_data_train(title):
-    df=pd.read_csv("data/processed/clean_database.csv")
-    df=df.loc[df["StockCode"]==title]
-    return df
+
+
+# @st.cache_data
+# def gabung_data(nama_perusahaan):
+#     df=pd.read_csv("data/processed/clean_database.csv")
+#     df1=scrap_tambahan()
+#     df=pd.concat([df,df1],ignore_index=True)
+    
+#     #spesifikasi namaperusahaan
+#     df_perusahaan=df[df["StockCode"]==nama_perusahaan]
+#     df_perusahaan["Date"]=df_perusahaan["Date"].astype(str)
+#     df_perusahaan=preprocess_data(df_perusahaan)
+#     return df_perusahaan
+
+# def ambil_data_train(title):
+#     df=pd.read_csv("data/processed/clean_database.csv")
+#     df=df.loc[df["StockCode"]==title]
+#     return df
 
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
@@ -136,21 +139,28 @@ def download_link(data_perusahaan):
         mime='text/csv',
     )
 
-# Inisialisasi session state untuk 'data_perusahaan'
-st.session_state['data_perusahaan'] = None
-st.title('Unlock Insights: Advanced Forecasting Models at Your Fingertips')
+# # Inisialisasi session state untuk 'data_perusahaan'
+# st.session_state['data_perusahaan'] = None
+# st.title('Unlock Insights: Advanced Forecasting Models at Your Fingertips')
 
-col1,col2=st.columns(2)
-with col1:
-    input=st.text_input('Write the IDX of the company')
-    title=str(input)
-    button_scrap = st.button('Scrap Data')
-    if button_scrap:
-        title=str(input)
-        st.session_state['data_perusahaan'] = gabung_data(title)
+# col1,col2=st.columns(2)
+# with col1:
+#     input=st.text_input('Write the IDX of the company')
+#     title=str(input)
+#     button_scrap = st.button('Scrap Data')
+#     if button_scrap:
+#         title=str(input)
+#         st.session_state['data_perusahaan'] = gabung_data(title)
      
-with col2:
-    if 'data_perusahaan' in st.session_state and st.session_state['data_perusahaan'] is not None:
-        # Asumsi 'download_link' adalah fungsi yang Anda definisikan untuk mengunduh data
-        download_link(st.session_state['data_perusahaan'])
-        st.write(st.session_state['data_perusahaan'])
+# with col2:
+#     if 'data_perusahaan' in st.session_state and st.session_state['data_perusahaan'] is not None:
+#         # Asumsi 'download_link' adalah fungsi yang Anda definisikan untuk mengunduh data
+#         download_link(st.session_state['data_perusahaan'])
+#         st.write(st.session_state['data_perusahaan'])
+input=st.text_input('Write the IDX of the company')
+if input:
+    perusahaan=str(input)
+    data=scrap_tambahan()
+    data=data[data["StockCode"]==perusahaan]
+    download_link(data)
+    st.write(data)
