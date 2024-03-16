@@ -11,9 +11,6 @@ import numpy as np
 import json
 import selenium
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
-from webdriver_manager.core.os_manager import ChromeType
 
 
 #buat fungsi preprocessing
