@@ -89,8 +89,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.firefox import GeckoDriverManager
 
-URL = "https://www.unibet.fr/sport/football/europa-league/europa-league-matchs"
-XPATH = "//*[@class='ui-mainview-block eventpath-wrapper']"
+URL = "https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date=20240302"
 TIMEOUT = 20
 
 st.title("Test Selenium")
@@ -106,17 +105,16 @@ driver = webdriver.Firefox(
 driver.get(URL)
 
 try:
-    WebDriverWait(driver, TIMEOUT).until(
-        EC.visibility_of_element_located((By.XPATH, XPATH,))
-    )
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
+#             time.sleep(0.2)
+    page_source = driver.page_source
+    st.write(page_source)
 
 except TimeoutException:
     st.warning("Timed out waiting for page to load")
     driver.quit()
 
 time.sleep(10)
-elements = driver.find_elements_by_xpath(XPATH)
-st.write([el.text for el in elements])
 driver.quit()
 
 # # Pengaturan FirefoxOptions untuk menjalankan dalam mode headless
