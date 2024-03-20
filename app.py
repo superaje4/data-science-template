@@ -81,7 +81,7 @@ from webdriver_manager.firefox import GeckoDriverManager
 
 
 # Fungsi untuk scraping data tambahan
-@st.cache(allow_output_mutation=True)
+@st.cache_data
 def scrap_tambahan(perusahaan):
     stock_code = pd.read_csv("data/processed/clean_database.csv")["StockCode"].unique()
     start_date = '2024-03-02'
