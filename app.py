@@ -61,13 +61,13 @@ def preprocess_data(df):
 
 
 # Fungsi untuk menginstal dan mengatur geckodriver
-@st.cache_resource
-def install_geckodriver():
-    os.system('sbase install geckodriver')
-    os.system('ln -s /home/appuser/venv/lib/python3.7/site-packages/seleniumbase/drivers/geckodriver /home/appuser/venv/bin/geckodriver')
+# @st.cache_resource
+# def install_geckodriver():
+#     os.system('sbase install geckodriver')
+#     os.system('ln -s /home/appuser/venv/lib/python3.7/site-packages/seleniumbase/drivers/geckodriver /home/appuser/venv/bin/geckodriver')
 
-# Pastikan geckodriver terinstal
-_ = install_geckodriver()
+# # Pastikan geckodriver terinstal
+# _ = install_geckodriver()
 
 # Fungsi untuk scraping data tambahan
 @st.cache(allow_output_mutation=True)
@@ -92,7 +92,7 @@ def scrap_tambahan(perusahaan):
         options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3')
         
         # Menggunakan Firefox sebagai browser
-        browser = webdriver.Firefox(options=options)
+        browser = webdriver.Firefox(options=options,excutable_path='geckodriver.exe')
         
         for i in formatted_dates:
             url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={i}"
