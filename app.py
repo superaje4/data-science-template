@@ -59,14 +59,26 @@ def preprocess_data(df):
 
 
 
-# Fungsi untuk menginstal dan mengatur geckodriver
-@st.cache_resource
-def install_geckodriver():
-    os.system('sbase install geckodriver')
-    os.system('ln -s /home/appuser/venv/lib/python3.9/site-packages/seleniumbase/drivers/geckodriver /home/appuser/venv/bin/geckodriver')
+# # Fungsi untuk menginstal dan mengatur geckodriver
+# @st.cache_resource
+# def install_geckodriver():
+#     os.system('sbase install geckodriver')
+#     os.system('ln -s /home/appuser/venv/lib/python3.9/site-packages/seleniumbase/drivers/geckodriver /home/appuser/venv/bin/geckodriver')
 
-# Pastikan geckodriver terinstal
-_ = install_geckodriver()
+# # Pastikan geckodriver terinstal
+# _ = install_geckodriver()
+
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.firefox import GeckoDriverManager
+
+
+
 
 # Fungsi untuk scraping data tambahan
 @st.cache(allow_output_mutation=True)
@@ -84,35 +96,34 @@ def scrap_tambahan(perusahaan):
         tmp = pd.DataFrame(columns=["Date", "StockCode", "Close"])
         
         # Pengaturan FirefoxOptions untuk menjalankan dalam mode headless
-        options = Options()
-        options.add_argument('--headless')
-        options.add_argument('--disable-gpu')
-        options.add_argument('window-size=1920x1080')
-        options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3')
-        
-        # Menggunakan Firefox sebagai browser
-        browser = webdriver.Firefox(options=options)
+        firefoxOptions = Options()
+        firefoxOptions.add_argument("--headless")
+        service = Service(GeckoDriverManager().install())
+        driver = webdriver.Firefox(
+            options=firefoxOptions,
+            service=service,
+)
         
         for i in formatted_dates:
             url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={i}"
-            browser.get(url)
-            WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
+            driver.get(url)
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
             time.sleep(0.2)
             
-            page_source = browser.page_source
+            page_source = driver.page_source
             if 'recordsTotal":0' in page_source:
                 df = pd.DataFrame({"Date": [i[:4] + '-' + i[4:6] + '-' + i[6:] for _ in range(len(stock_code))],
                                    "StockCode": list(stock_code),
                                    "Close": ["unk" for _ in stock_code]})
                 tmp = pd.concat([tmp, df], ignore_index=True)
             else:
-                data = json.loads(browser.find_element(By.TAG_NAME, 'pre').text)
+                data = json.loads(driver.find_element(By.TAG_NAME, 'pre').text)
                 df = pd.DataFrame(data["data"])
                 df = df[["Date", "StockCode", "Close"]]
                 tmp = pd.concat([tmp, df], ignore_index=True)
 
     finally:
-        browser.quit()
+        driver.quit()
         # Anda harus mendefinisikan fungsi preprocess_data di tempat lain
         tmp = preprocess_data(tmp)  # Pastikan fungsi ini ada dan berfungsi dengan benar
         tmp=tmp.loc[tmp['StockCode'] == perusahaan]
