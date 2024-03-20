@@ -9,8 +9,18 @@ from selenium.webdriver.chrome.options import Options
 from datetime import datetime,timedelta
 import numpy as np
 import json
-import selenium
+import pandas as pd
+import json
+import time
+from datetime import datetime, timedelta
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import streamlit as st
 from selenium.webdriver.chrome.options import Options
+import os
 
 @st.cache_data
 def preprocess_data(df):
@@ -48,171 +58,69 @@ def preprocess_data(df):
     return df
 
 
-@st.cache_data
-def scrap_tambahan():
-    stock_code=pd.read_csv("data/processed/clean_database.csv")["StockCode"].unique()
-    #buat fungsi iteratif
+
+
+# Fungsi untuk menginstal dan mengatur geckodriver
+@st.experimental_singleton
+def install_geckodriver():
+    os.system('sbase install geckodriver')
+    os.system('ln -s /home/appuser/venv/lib/python3.7/site-packages/seleniumbase/drivers/geckodriver /home/appuser/venv/bin/geckodriver')
+
+# Pastikan geckodriver terinstal
+_ = install_geckodriver()
+
+# Fungsi untuk scraping data tambahan
+@st.cache(allow_output_mutation=True)
+def scrap_tambahan(perusahaan):
+    stock_code = pd.read_csv("data/processed/clean_database.csv")["StockCode"].unique()
     start_date = '2024-03-02'
     now = datetime.now()
     one_day_before = now - timedelta(days=1)
     end_date = one_day_before.strftime("%Y-%m-%d")
     dates = pd.date_range(start=start_date, end=end_date, freq='D')
-
-    #hilangkan jam detik dan milidetik
-    formatted_dates = [str(date).replace("-","") for date in dates]
-    formatted_dates = [date[:8] for date in formatted_dates]
-
-    #ubah formated dates ke format 2020-03-02
-    def change_date_format(date):
-        return f"{date[:4]}-{date[4:6]}-{date[6:]}"
     
+    formatted_dates = [str(date).split()[0].replace("-", "") for date in dates]  # Memperbaiki format tanggal
     
     try:
         tmp = pd.DataFrame(columns=["Date", "StockCode", "Close"])
         
+        # Pengaturan FirefoxOptions untuk menjalankan dalam mode headless
         options = Options()
-        options.add_argument('--headless')  # Run Chrome in headless mode (without a visible browser window)
-        options.add_argument('--disable-gpu')  # Disable GPU acceleration (can help with stability)
-        # Menetapkan ukuran jendela
+        options.add_argument('--headless')
+        options.add_argument('--disable-gpu')
         options.add_argument('window-size=1920x1080')
-        # Mengganti user-agent untuk menghindari deteksi sebagai bot
         options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3')
-        undetect = selenium.webdriver.Chrome(options=options)
+        
+        # Menggunakan Firefox sebagai browser
+        browser = webdriver.Firefox(options=options)
         
         for i in formatted_dates:
             url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={i}"
-            undetect.get(url)
-            WebDriverWait(undetect, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
+            browser.get(url)
+            WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
             time.sleep(0.2)
             
-            page_source = undetect.page_source
+            page_source = browser.page_source
             if 'recordsTotal":0' in page_source:
-                # Assuming change_date_format is a function you've defined elsewhere
-                df = pd.DataFrame({"Date": [change_date_format(i) for _ in range(len(stock_code))],
-                                "StockCode": list(stock_code),
-                                "Close": ["unk" for _ in stock_code]})
+                df = pd.DataFrame({"Date": [i[:4] + '-' + i[4:6] + '-' + i[6:] for _ in range(len(stock_code))],
+                                   "StockCode": list(stock_code),
+                                   "Close": ["unk" for _ in stock_code]})
                 tmp = pd.concat([tmp, df], ignore_index=True)
             else:
-                data = json.loads(undetect.find_element(By.TAG_NAME, 'pre').text)
+                data = json.loads(browser.find_element(By.TAG_NAME, 'pre').text)
                 df = pd.DataFrame(data["data"])
-                # Ensure the column names here match those in the JSON structure
                 df = df[["Date", "StockCode", "Close"]]
                 tmp = pd.concat([tmp, df], ignore_index=True)
-                
-            st.write(tmp)
 
     finally:
-        time.sleep(2)
-        undetect.quit()
-        tmp=preprocess_data(tmp)
+        browser.quit()
+        # Anda harus mendefinisikan fungsi preprocess_data di tempat lain
+        tmp = preprocess_data(tmp)  # Pastikan fungsi ini ada dan berfungsi dengan benar
+        tmp=tmp.loc[tmp['StockCode'] == perusahaan]
         return tmp
 
 
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-import os
-import shutil
-import time
-
-def get_chromedriver_path() -> str:
-    return shutil.which('chromedriver')
-
-def get_webdriver_options(proxy: str = None) -> Options:
-    options = Options()
-    options.add_argument("--headless")
-    if proxy is not None:
-        options.add_argument(f"--proxy-server=socks5://{proxy}")
-    return options
-
-def get_webpage_content(url: str, proxy: str = None) -> str:
-    options = get_webdriver_options(proxy=proxy)
-    chromedriver_path = get_chromedriver_path()
-    service = Service(executable_path=chromedriver_path)
-    html_content = None
-    with webdriver.Chrome(service=service, options=options) as driver:
-        try:
-            driver.get(url)
-            time.sleep(2)  # Tunggu untuk memastikan halaman telah dimuat sepenuhnya
-            html_content = driver.page_source
-        except Exception as e:
-            print(f"Error during website access: {e}")
-    return html_content
-
-def ambil_data(perusahaan):
-    start_date = '2024-03-02'
-    now = datetime.now()
-    one_day_before = now - timedelta(days=1)
-    end_date = one_day_before.strftime("%Y-%m-%d")
-    dates = pd.date_range(start=start_date, end=end_date, freq='D')
-
-    #hilangkan jam detik dan milidetik
-    formatted_dates = [str(date).replace("-","") for date in dates]
-    formatted_dates = [date[:8] for date in formatted_dates]
-    for i in formatted_dates:
-        url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={i}"
-        proxy = None  # Ganti dengan proxy Anda jika perlu
-        content = get_webpage_content(url=url, proxy=proxy)
-        if content:
-            st.write("Successfully retrieved web page content.")
-        else:
-            st.write("Failed to retrieve web page content.")
-
-input=st.text_input('Write the IDX of the company')
-
+input=st.text_input('Masukkan kode saham')
 if input:
-    ambil_data(input)
-
-
-
-
-
-# @st.cache_data
-# def gabung_data(nama_perusahaan):
-#     df=pd.read_csv("data/processed/clean_database.csv")
-#     df1=scrap_tambahan()
-#     df=pd.concat([df,df1],ignore_index=True)
-    
-#     #spesifikasi namaperusahaan
-#     df_perusahaan=df[df["StockCode"]==nama_perusahaan]
-#     df_perusahaan["Date"]=df_perusahaan["Date"].astype(str)
-#     df_perusahaan=preprocess_data(df_perusahaan)
-#     return df_perusahaan
-
-# def ambil_data_train(title):
-#     df=pd.read_csv("data/processed/clean_database.csv")
-#     df=df.loc[df["StockCode"]==title]
-#     return df
-
-# def convert_df(df):
-#     # IMPORTANT: Cache the conversion to prevent computation on every rerun
-#     return df.to_csv().encode('utf-8')
-
-# def download_link(data_perusahaan):
-#     csv = convert_df(data_perusahaan)
-#     st.download_button(
-#         label="Download data as CSV",
-#         data=csv,
-#         file_name='large_df.csv',
-#         mime='text/csv',
-#     )
-
-# # Inisialisasi session state untuk 'data_perusahaan'
-# st.session_state['data_perusahaan'] = None
-# st.title('Unlock Insights: Advanced Forecasting Models at Your Fingertips')
-
-# col1,col2=st.columns(2)
-# with col1:
-#     input=st.text_input('Write the IDX of the company')
-#     title=str(input)
-#     button_scrap = st.button('Scrap Data')
-#     if button_scrap:
-#         title=str(input)
-#         st.session_state['data_perusahaan'] = gabung_data(title)
-     
-# with col2:
-#     if 'data_perusahaan' in st.session_state and st.session_state['data_perusahaan'] is not None:
-#         # Asumsi 'download_link' adalah fungsi yang Anda definisikan untuk mengunduh data
-#         download_link(st.session_state['data_perusahaan'])
-#         st.write(st.session_state['data_perusahaan'])
-# 
+    data=scrap_tambahan(input)
+    st.write(data)

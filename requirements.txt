@@ -1,7 +1,4 @@
 pandas
 streamlit
-selenium
-requests
+seleniumbase
 pandas
-lxml
-countryflag
