@@ -89,33 +89,47 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.firefox import GeckoDriverManager
 
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
+import streamlit as st
+import time
+
 URL = "https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date=20240302"
 TIMEOUT = 20
 
 st.title("Test Selenium")
 st.markdown("You should see some random Football match text below in about 21 seconds")
 
-firefoxOptions = Options()
-firefoxOptions.add_argument("--headless")
-service = Service(GeckoDriverManager().install())
-driver = webdriver.Firefox(
-    options=firefoxOptions,
+chromeOptions = Options()
+chromeOptions.add_argument("--headless")  # Ensure GUI is off
+chromeOptions.add_argument("--no-sandbox")
+chromeOptions.add_argument("--disable-dev-shm-usage")
+
+service = Service(ChromeDriverManager().install())
+
+driver = webdriver.Chrome(
     service=service,
+    options=chromeOptions,
 )
+
 driver.get(URL)
 
 try:
-    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
-#             time.sleep(0.2)
+    WebDriverWait(driver, TIMEOUT).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
     page_source = driver.page_source
     st.write(page_source)
 
 except TimeoutException:
     st.warning("Timed out waiting for page to load")
+finally:
     driver.quit()
 
-time.sleep(10)
-driver.quit()
 
 # # Pengaturan FirefoxOptions untuk menjalankan dalam mode headless
 # firefoxOptions = Options()
