@@ -77,60 +77,101 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.firefox import GeckoDriverManager
 
+import streamlit as st
+import time
 
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.service import Service
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.firefox import GeckoDriverManager
 
+URL = "https://www.unibet.fr/sport/football/europa-league/europa-league-matchs"
+XPATH = "//*[@class='ui-mainview-block eventpath-wrapper']"
+TIMEOUT = 20
 
-# Fungsi untuk scraping data tambahan
-@st.cache_data
-def scrap_tambahan(perusahaan):
-    stock_code = pd.read_csv("data/processed/clean_database.csv")["StockCode"].unique()
-    start_date = '2024-03-02'
-    now = datetime.now()
-    one_day_before = now - timedelta(days=1)
-    end_date = one_day_before.strftime("%Y-%m-%d")
-    dates = pd.date_range(start=start_date, end=end_date, freq='D')
-    
-    formatted_dates = [str(date).split()[0].replace("-", "") for date in dates]  # Memperbaiki format tanggal
-    
-    try:
-        tmp = pd.DataFrame(columns=["Date", "StockCode", "Close"])
-        
-        # Pengaturan FirefoxOptions untuk menjalankan dalam mode headless
-        firefoxOptions = Options()
-        firefoxOptions.add_argument("--headless")
-        service = Service(GeckoDriverManager().install())
-        driver = webdriver.Firefox(
-            options=firefoxOptions,
-            service=service,
+st.title("Test Selenium")
+st.markdown("You should see some random Football match text below in about 21 seconds")
+
+firefoxOptions = Options()
+firefoxOptions.add_argument("--headless")
+service = Service(GeckoDriverManager().install())
+driver = webdriver.Firefox(
+    options=firefoxOptions,
+    service=service,
 )
+driver.get(URL)
+
+try:
+    WebDriverWait(driver, TIMEOUT).until(
+        EC.visibility_of_element_located((By.XPATH, XPATH,))
+    )
+
+except TimeoutException:
+    st.warning("Timed out waiting for page to load")
+    driver.quit()
+
+time.sleep(10)
+elements = driver.find_elements_by_xpath(XPATH)
+st.write([el.text for el in elements])
+driver.quit()
+
+# # Pengaturan FirefoxOptions untuk menjalankan dalam mode headless
+# firefoxOptions = Options()
+# firefoxOptions.add_argument("--headless")
+# service = Service(GeckoDriverManager().install())
+# driver = webdriver.Firefox(
+#     options=firefoxOptions,
+#     service=service,
+# )
+
+# # Fungsi untuk scraping data tambahan
+# @st.cache_data
+# def scrap_tambahan(perusahaan):
+#     stock_code = pd.read_csv("data/processed/clean_database.csv")["StockCode"].unique()
+#     start_date = '2024-03-02'
+#     now = datetime.now()
+#     one_day_before = now - timedelta(days=1)
+#     end_date = one_day_before.strftime("%Y-%m-%d")
+#     dates = pd.date_range(start=start_date, end=end_date, freq='D')
+    
+#     formatted_dates = [str(date).split()[0].replace("-", "") for date in dates]  # Memperbaiki format tanggal
+    
+#     try:
+#         tmp = pd.DataFrame(columns=["Date", "StockCode", "Close"])
         
-        for i in formatted_dates:
-            url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={i}"
-            driver.get(url)
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
-            time.sleep(0.2)
+
+        
+#         for i in formatted_dates:
+#             url = f"https://www.idx.co.id/primary/TradingSummary/GetStockSummary?length=9999&start=0&date={i}"
+#             driver.get(url)
+#             WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, "body > pre")))
+#             time.sleep(0.2)
             
-            page_source = driver.page_source
-            if 'recordsTotal":0' in page_source:
-                df = pd.DataFrame({"Date": [i[:4] + '-' + i[4:6] + '-' + i[6:] for _ in range(len(stock_code))],
-                                   "StockCode": list(stock_code),
-                                   "Close": ["unk" for _ in stock_code]})
-                tmp = pd.concat([tmp, df], ignore_index=True)
-            else:
-                data = json.loads(driver.find_element(By.TAG_NAME, 'pre').text)
-                df = pd.DataFrame(data["data"])
-                df = df[["Date", "StockCode", "Close"]]
-                tmp = pd.concat([tmp, df], ignore_index=True)
+#             page_source = driver.page_source
+#             if 'recordsTotal":0' in page_source:
+#                 df = pd.DataFrame({"Date": [i[:4] + '-' + i[4:6] + '-' + i[6:] for _ in range(len(stock_code))],
+#                                    "StockCode": list(stock_code),
+#                                    "Close": ["unk" for _ in stock_code]})
+#                 tmp = pd.concat([tmp, df], ignore_index=True)
+#             else:
+#                 data = json.loads(driver.find_element(By.TAG_NAME, 'pre').text)
+#                 df = pd.DataFrame(data["data"])
+#                 df = df[["Date", "StockCode", "Close"]]
+#                 tmp = pd.concat([tmp, df], ignore_index=True)
 
-    finally:
-        driver.quit()
-        # Anda harus mendefinisikan fungsi preprocess_data di tempat lain
-        tmp = preprocess_data(tmp)  # Pastikan fungsi ini ada dan berfungsi dengan benar
-        tmp=tmp.loc[tmp['StockCode'] == perusahaan]
-        return tmp
+#     finally:
+#         driver.quit()
+#         # Anda harus mendefinisikan fungsi preprocess_data di tempat lain
+#         tmp = preprocess_data(tmp)  # Pastikan fungsi ini ada dan berfungsi dengan benar
+#         tmp=tmp.loc[tmp['StockCode'] == perusahaan]
+#         return tmp
 
 
-input=st.text_input('Masukkan kode saham')
-if input:
-    data=scrap_tambahan(input)
-    st.write(data)
+# input=st.text_input('Masukkan kode saham')
+# if input:
+#     data=scrap_tambahan(input)
+#     st.write(data)
